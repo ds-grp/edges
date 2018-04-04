@@ -1,7 +1,7 @@
 #*************************************************
 #The following parameters are general run settings.
 #*************************************************
-DATAFILE: ../data/bowman_2018_fg_and_t21.csv #global signal data file
+DATAFILE: data/processed/bowman_2018_fg_and_t21.csv #global signal data file
 MPI: False #determine whether to use MPI
 THREADS: 2 #number of threads to run
 NSTEPS: 5000 #number of steps for each sampler

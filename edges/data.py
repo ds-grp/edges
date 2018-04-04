@@ -41,3 +41,8 @@ def fetch_fig1():
     df = clean_fig1(df)
 
     return df
+
+def fetch_processed():
+    df = pd.read_csv('data/processed/bowman_2018_fg_and_t21.csv')
+
+    return df
