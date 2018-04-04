@@ -122,6 +122,7 @@ class Sampler():
         '''
         self.verbose=verbose
         self.minimized=False
+        self.ln_ml=-np.inf
         with open(config_file, 'r') as ymlfile:
             self.config= yaml.load(ymlfile)
         ymlfile.close()
@@ -169,6 +170,9 @@ class Sampler():
             self.params_all[pname]=result[pnum]
         self.model=TbSky(result,self.freqs,self.params_all,[])
         self.resid=self.tb_meas-self.model
+        self.lng_ml=lnprob(result,self.freqs,self.tb_meas,
+        self.var_tb,self.params_all,param_list,self.param_priors)
+
 
     def approximate_ml(self):
         if self.params_all['NPOLY']>0:
