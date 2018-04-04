@@ -11,3 +11,10 @@ To use the package files, we recommend the following (after cloning to ``/users/
   site.addsitedir('/users/johndoe/edges/')
 
   from edges import data, utils, models
+
+
+To run the ``global_sampler.py``, run
+
+.. code-block:: python
+
+  python edges/global_sampler.py -c <config_file>
