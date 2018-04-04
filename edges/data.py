@@ -1,11 +1,11 @@
 import numpy as np
 import pandas as pd
 
-from myhelpers import misc
-
 
 def clean_fig1(df):
-    # Quickly rename the columns for the Figure 1 data
+    # Quickly rename the columns for the Figure 1 data to
+    # ['freq', 'weight', 'tsky', 'tres1', 'tres2', 'tmodel', 't21']
+
     df.rename(columns={
         'Frequency [MHz]': 'freq',
         ' Weight': 'weight',
@@ -23,8 +23,21 @@ def clean_fig1(df):
     return df
 
 
+def fetch_fig2():
+    try:
+        df = pd.read_csv('http://loco.lab.asu.edu/download/792/')
+    except URLError:
+        df = pd.read_csv('data/raw/figure2_plotdata.csv')
+
+    return df
+
+
 def fetch_fig1():
-    df = pd.read_csv(misc.bpjoin('edges/data/raw/figure1_plotdata.csv'))
+    try:
+        df = pd.read_csv('http://loco.lab.asu.edu/download/790/')
+    except URLError:
+        df = pd.read_csv('data/raw/figure1_plotdata.csv')
+
     df = clean_fig1(df)
 
     return df
