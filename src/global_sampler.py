@@ -8,7 +8,6 @@ import scipy.interpolate as interp
 import numpy as np
 import yaml, emcee, argparse, yaml
 F21=1420405751.7667#21 cm frequency.
-import global_signal_black_holes as GSBH
 import copy,sys,os
 import scipy.optimize as op
 
@@ -107,7 +106,7 @@ def lnprob(params,x,y,yvar,param_template,param_list,param_priors):
     lp=lnprior(params,param_list,param_priors)
     if not np.isfinite(lp):
         return -np.inf
-    return lp+lnlike(params,x,y,yvar,param_template,param_list,analytic)
+    return lp+lnlike(params,x,y,yvar,param_template,param_list)
 
 
 class Sampler():
@@ -257,6 +256,5 @@ if __name__ == "__main__":
     #parser.add_argument('-p','--progress',
     #help='show progress bar',action='store_true')
     args=parser.parse_args()
-    my_sampler=Sampler(args.config,
-    analytic=args.analytic)
+    my_sampler=Sampler(args.config)
     my_sampler.sample()
