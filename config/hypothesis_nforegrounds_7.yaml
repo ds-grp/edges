@@ -1,0 +1,103 @@
+#*************************************************
+#The following parameters are general run settings.
+#*************************************************
+DATAFILE: ../data/processed/bowman_2018_fg_and_t21.csv #global signal data file
+MPI: False #determine whether to use MPI
+THREADS: 2 #number of threads to run
+NSTEPS: 20000 #number of steps for each sampler
+NWALKERS: 22 #number of MCMC walkers
+PROJECT_NAME: nforegrounds_7 #name of output file.
+NPTS_NOISE_EST: 20 #number of points to estimate std from
+MPI: False #set to true if you are using open MPI
+SAMPLE_BALL: .01 #fractional standard deviation of gaussian ball to Initialize walkers
+NBURN: 10000      #number of burn points per walker.
+FMIN: 60. #minimum frequency (MHz)
+FMAX: 94. #maximum frequency (MHz)
+#**************************************************
+#We specify the default values of all model parameters
+#in this section, including the parameters that we are
+#not fitting. The next section specifies the names of
+#parameters to fit.
+#**************************************************
+PARAMS: #this section specifies settings for all model parameters
+    NU0: 78.3 #Analytic central frequency
+    TAU: 6.5  #flatness parameter
+    A:  .520 #Amplitude parameter
+    W:  20.7  #Width parameter.
+    NPOLY: 7
+    APOLY0: 1700.
+    APOLY1: 600.
+    APOLY2: -1200.
+    APOLY3: 750.
+    APOLY4: -175.
+    APOLY5: 50.
+    APOLY6: -50.
+#**************************************************
+#PARAMS2VARY is a list of parameter names that will
+#be fit by the MCMC.
+#**************************************************
+PARAMS2VARY: #specify the names of parameters that will be fitted
+    - NU0
+    - TAU
+    - A
+    - W
+    - APOLY0
+    - APOLY1
+    - APOLY2
+    - APOLY3
+    - APOLY4
+    - APOLY5
+    - APOLY6
+#**************************************************
+#PRIORS specifies prior distributions on our fitting
+#parameters.
+#For each parameter, specify TYPE which can be
+#UNIFORM, GAUSSIAN, or LOGNORMAL
+#For UNIFORM priors, specify MIN and MAX value.
+#For LOGNORMAL or GAUSSIAN priors, specify MEAN, VAR
+#**************************************************
+PRIORS:
+  NU0:
+    TYPE: UNIFORM
+    MIN: 0.
+    MAX: 1000.
+  TAU:
+    TYPE: UNIFORM
+    MIN: -100.
+    MAX: 1000.
+  A:
+    TYPE: UNIFORM
+    MIN: 0.
+    MAX: 1000.
+  W:
+    TYPE: UNIFORM
+    MIN: 0.
+    MAX: 1000.
+  APOLY0:
+    TYPE: UNIFORM
+    MIN: -10000
+    MAX: 10000
+  APOLY1:
+    TYPE: UNIFORM
+    MIN: -10000
+    MAX: 10000
+  APOLY2:
+    TYPE: UNIFORM
+    MIN: -10000
+    MAX: 10000
+  APOLY3:
+    TYPE: UNIFORM
+    MIN: -10000
+    MAX: 10000
+  APOLY4:
+    TYPE: UNIFORM
+    MIN: -10000
+    MAX: 10000
+  APOLY5:
+    TYPE: UNIFORM
+    MIN: -10000
+    MAX: 10000
+  APOLY6:
+    TYPE: UNIFORM
+    MIN: -10000
+    MAX: 10000
