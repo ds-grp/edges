@@ -9,8 +9,10 @@ NWALKERS: 18 #number of MCMC walkers
 PROJECT_NAME: test_analytic #name of output file.
 NPTS_NOISE_EST: 20 #number of points to estimate std from
 MPI: False #set to true if you are using open MPI
-SAMPLE_BALL: .01
-NBURN: 1000
+SAMPLE_BALL: .01 #fractional standard deviation of gaussian ball to Initialize walkers
+NBURN: 1000      #number of burn points per walker.
+FMIN: 60. #minimum frequency (MHz)
+FMAX: 94. #maximum frequency (MHz)
 #**************************************************
 #We specify the default values of all model parameters
 #in this section, including the parameters that we are

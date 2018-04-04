@@ -113,8 +113,7 @@ class Sampler():
     '''
     Class for running MCMC and storing output.
     '''
-    def __init__(self,config_file,verbose=False,
-    fmin=None,fmax=None):
+    def __init__(self,config_file,verbose=False):
         '''
         Initialize the sampler.
         Args:
@@ -122,8 +121,6 @@ class Sampler():
         '''
         self.verbose=verbose
         self.minimized=False
-        self.fmin=fmin
-        self.fmax=fmax
         with open(config_file, 'r') as ymlfile:
             self.config= yaml.load(ymlfile)
         ymlfile.close()
@@ -136,12 +133,10 @@ class Sampler():
             skiprows=1,delimiter=',')
         elif self.config['DATAFILE'][-3:]=='npy':
             self.data=np.load(self.config['DATAFILE'])
-        if not fmin is None:
-            select=self.data[:,0]>=fmin
-            self.data=self.data[select,:]
-        if not fmax is None:
-            select=self.data[:,0]<=fmax
-            self.data=self.data[select,:]
+        select=self.data[:,0]>=self.config['FMIN']
+        self.data=self.data[select,:]
+        select=self.data[:,0]<=self.config['FMAX']
+        self.data=self.data[select,:]
         self.freqs,self.tb_meas,self.dtb\
         =self.data[:,0],self.data[:,1],self.data[:,2]
         self.var_tb=var_resid(self.dtb,
@@ -245,9 +240,9 @@ Allow execution as a script.
 '''
 if __name__ == "__main__":
 
-    desc=('MCMC driver for global-signal black-holes model.\n'
+    desc=('MCMC driver for fitting edges data.\n'
           'To run: mpirun -np <num_processes>'
-          'python global_signal_black_holes_mcmc.py -c <config_file>')
+          'python global_sampler.py -c <config_file>')
     parser=argparse.ArgumentParser(description=desc)
     parser.add_argument('-c','--config',
     help='configuration file')
