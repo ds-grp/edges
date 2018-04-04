@@ -6,7 +6,8 @@ mpirun -np 2 python global_signal_black_holes_mcmc.py -i <config_file>
 import scipy.signal as signal
 import scipy.interpolate as interp
 import numpy as np
-import yaml, emcee, argparse, yaml
+import yaml, argparse, yaml
+from emcee import emcee
 F21=1420405751.7667#21 cm frequency.
 import copy,sys,os
 import scipy.optimize as op
