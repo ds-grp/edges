@@ -250,20 +250,24 @@ class Sampler():
             yaml.dump(self.params_all,yaml_file,default_flow_style=False)
         yaml_file.close()
         self.sampled=True
-        self.acors=self.sampler.acor.astype(int)
-        #estimate covariance
-        self.cov_samples=np.zeros((len(self.params_vary),
-        len(self.params_vary)))
-        for i in range(len(self.params_vary)):
-            for j in range(len(self.params_vary)):
-                stepsize=np.max([self.acors[i],self.acors[j]])
-                csample_i=self.sampler.chain[i,::stepsize,:].flatten()
-                csample_j=self.sampler.chain[j,::stepsize,:].flatten()
-                self.cov_samples[i,j]=np.mean((csample_i-csample_i.mean())\
-                *(csample_j-csample_j.mean()))
-        self.evidence=np.exp(self.ln_ml)/np.sqrt(np.linalg.det(self.cov_samples))#compute conservative evidence without prior factor
-        np.save(self.config['PROJECT_NAME']+'/output.npz',
-        chain=self.sampler.chain,evidence=self.evidence,cov_samples=self.cov_samples,autocorrs=self.acors)
+        if self.config['COMPUTECOVARIANCE']:
+            self.acors=self.sampler.acor.astype(int)
+            #estimate covariance
+            self.cov_samples=np.zeros((len(self.params_vary),
+            len(self.params_vary)))
+            for i in range(len(self.params_vary)):
+                for j in range(len(self.params_vary)):
+                    stepsize=np.max([self.acors[i],self.acors[j]])
+                    csample_i=self.sampler.chain[i,::stepsize,:].flatten()
+                    csample_j=self.sampler.chain[j,::stepsize,:].flatten()
+                    self.cov_samples[i,j]=np.mean((csample_i-csample_i.mean())\
+                    *(csample_j-csample_j.mean()))
+            self.evidence=np.exp(self.ln_ml)/np.sqrt(np.linalg.det(self.cov_samples))#compute conservative evidence without prior factor
+            np.save(self.config['PROJECT_NAME']+'/output.npz',
+            chain=self.sampler.chain,evidence=self.evidence,cov_samples=self.cov_samples,autocorrs=self.acors)
+        else:
+            np.save(self.config['PROJECT_NAME']+'/output.npz',chain=self.sampler.chain)
+
 
 '''
 Allow execution as a script.

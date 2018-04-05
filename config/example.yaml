@@ -1,18 +1,19 @@
 #*************************************************
 #The following parameters are general run settings.
 #*************************************************
-DATAFILE: data/processed/bowman_2018_fg_and_t21.csv #global signal data file
+DATAFILE: ../data/processed/bowman_2018_fg_and_t21.csv #global signal data file
 MPI: False #determine whether to use MPI
-THREADS: 2 #number of threads to run
-NSTEPS: 5000 #number of steps for each sampler
+THREADS: 4 #number of threads to run
+NSTEPS: 10000 #number of steps for each sampler
 NWALKERS: 18 #number of MCMC walkers
-PROJECT_NAME: test_analytic #name of output file.
+PROJECT_NAME: test_mcmc #name of output file.
 NPTS_NOISE_EST: 20 #number of points to estimate std from
 MPI: False #set to true if you are using open MPI
 SAMPLE_BALL: .01 #fractional standard deviation of gaussian ball to Initialize walkers
-NBURN: 1000      #number of burn points per walker.
+NBURN: 10000      #number of burn points per walker.
 FMIN: 60. #minimum frequency (MHz)
 FMAX: 94. #maximum frequency (MHz)
+COMPUTECOVARIANCE: False
 #**************************************************
 #We specify the default values of all model parameters
 #in this section, including the parameters that we are
