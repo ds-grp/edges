@@ -7,7 +7,11 @@ import scipy.signal as signal
 import scipy.interpolate as interp
 import numpy as np
 import yaml, argparse, yaml
-from emcee import emcee
+import emcee
+emcee_v=emcee.__version__.split('.')[0]
+if int(emcee_v[0])>=3:
+    from emcee import emcee
+
 F21=1420405751.7667#21 cm frequency.
 import copy,sys,os
 import scipy.optimize as op
@@ -123,6 +127,7 @@ class Sampler():
         self.verbose=verbose
         self.minimized=False
         self.ln_ml=-np.inf
+        self.sampled=False
         with open(config_file, 'r') as ymlfile:
             self.config= yaml.load(ymlfile)
         ymlfile.close()
@@ -169,9 +174,10 @@ class Sampler():
         for pnum,pname in enumerate(param_list):
             self.params_all[pname]=result[pnum]
         self.model=TbSky(result,self.freqs,self.params_all,[])
+        self.ml_params=result
         self.resid=self.tb_meas-self.model
-        self.lng_ml=lnprob(result,self.freqs,self.tb_meas,
-        self.var_tb,self.params_all,param_list,self.param_priors)
+        self.ln_ml=lnprob(result,self.freqs,self.tb_meas,
+        self.var_tb,self.params_all,param_list,self.params_vary_priors)
 
 
     def approximate_ml(self):
@@ -190,6 +196,8 @@ class Sampler():
             #perform gradient descent on all params
         self.gradient_descent()
         self.minimized=True
+
+
 
 
     def sample(self):
@@ -218,11 +226,17 @@ class Sampler():
                 sys.exit(0)
             self.sampler=emcee.EnsembleSampler(nwalkers,ndim,lnprob,
             args=args,pool=pool)
+            self.sampler.run_mcmc(p0,self.config['NBURN'])#burn in
+            p0=self.sampler.chain[:,-1,:].squeeze()
+            self.sampler.reset()
             self.sampler.run_mcmc(p0,self.config['NSTEPS'])
             pool.close()
         else:
             self.sampler=emcee.EnsembleSampler(nwalkers,ndim,lnprob,
             args=args,threads=self.config['THREADS'])
+            self.sampler.run_mcmc(p0,self.config['NBURN'])#burn in
+            p0=self.sampler.chain[:,-1,:].squeeze()
+            self.sampler.reset()
             self.sampler.run_mcmc(p0,self.config['NSTEPS'])
         if not os.path.exists(self.config['PROJECT_NAME']):
             os.makedirs(self.config['PROJECT_NAME'])
@@ -235,10 +249,21 @@ class Sampler():
          as yaml_file:
             yaml.dump(self.params_all,yaml_file,default_flow_style=False)
         yaml_file.close()
-        np.save(self.config['PROJECT_NAME']+'/chain.npy',
-        self.sampler.chain)
-
-
+        self.sampled=True
+        self.acors=self.sampler.acor.astype(int)
+        #estimate covariance
+        self.cov_samples=np.zeros((len(self.params_vary),
+        len(self.params_vary)))
+        for i in range(len(self.params_vary)):
+            for j in range(len(self.params_vary)):
+                stepsize=np.max([self.acors[i],self.acors[j]])
+                csample_i=self.sampler.chain[i,::stepsize,:].flatten()
+                csample_j=self.sampler.chain[j,::stepsize,:].flatten()
+                self.cov_samples[i,j]=np.mean((csample_i-csample_i.mean())\
+                *(csample_j-csample_j.mean()))
+        self.evidence=np.exp(self.ln_ml)/np.sqrt(np.linalg.det(self.cov_samples))#compute conservative evidence without prior factor
+        np.save(self.config['PROJECT_NAME']+'/output.npz',
+        chain=self.sampler.chain,evidence=self.evidence,cov_samples=self.cov_samples,autocorrs=self.acors)
 
 '''
 Allow execution as a script.
