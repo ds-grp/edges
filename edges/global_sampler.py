@@ -7,11 +7,11 @@ import scipy.signal as signal
 import scipy.interpolate as interp
 import numpy as np
 import yaml, argparse, yaml
-import emcee
-emcee_v=emcee.__version__.split('.')[0]
-if int(emcee_v[0])>=3:
-    from emcee import emcee
 
+try:
+    from emcee import emcee
+except ImportError:
+    import emcee
 F21=1420405751.7667#21 cm frequency.
 import copy,sys,os
 import scipy.optimize as op
