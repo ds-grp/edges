@@ -5,7 +5,7 @@ DATAFILE: ../data/processed/bowman_2018_fg_and_t21.csv #global signal data file
 MPI: False #determine whether to use MPI
 THREADS: 4 #number of threads to run
 NSTEPS: 10000 #number of steps for each sampler
-NWALKERS: 18 #number of MCMC walkers
+NWALKERS: 20 #number of MCMC walkers
 PROJECT_NAME: test_mcmc #name of output file.
 NPTS_NOISE_EST: 20 #number of points to estimate std from
 MPI: False #set to true if you are using open MPI
@@ -14,8 +14,8 @@ NBURN: 10000      #number of burn points per walker.
 FMIN: 60. #minimum frequency (MHz)
 FMAX: 94. #maximum frequency (MHz)
 COMPUTECOVARIANCE: False
-SAMPLER: PARALLELTEMPERING
-NTEMPS: 20 #number of temperatures for parallel temperating 
+SAMPLER: ENSEMBLESAMPLER
+NTEMPS: 20 #number of temperatures for parallel temperating
 NTHIN: 1 #store ever N result in chain
 #**************************************************
 #We specify the default values of all model parameters

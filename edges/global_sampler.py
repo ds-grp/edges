@@ -154,6 +154,7 @@ class Sampler():
         self.params_all=self.config['PARAMS']
         self.params_vary=self.config['PARAMS2VARY']
         self.priors=self.config['PRIORS']
+        self.ndim=len(self.params_vary)
         self.resid=np.zeros_like(self.var_tb)
         self.model=np.zeros_like(self.resid)
 
@@ -234,19 +235,27 @@ class Sampler():
             pool.close()
         else:
             if self.config['SAMPLER']=='PARALLELTEMPERING':
-                def lnprior():
-                likelihood=lambda x: lnlike(x,self.freqs,self.tb_meas,
+                logl=lambda x: lnlike(x,self.freqs,self.tb_meas,
                 self.var_tb,self.params_all,self.params_vary)
-                prior=lambda x: lnprior(x,self.params_vary,self.params_priors)
-                self.sample=ptemcee.Sampler(self.config['NTEMPS'],
-                self.config['NWALKERS'],len(self.params2vary),likelihood,prior)
-                )
+                logp=lambda x: lnprior(x,self.params_vary,self.priors)
+                self.sampler=ptemcee.Sampler(ntemps=self.config['NTEMPS'],
+                                            nwalkers=self.config['NWALKERS'],
+                                            dim=self.ndim,
+                                            logl=logl,
+                                            logp=logp)
             else:
-                self.sampler=emcee.EnsembleSampler(nwalkers,ndim,lnprob,
-                args=args,threads=self.config['THREADS'])
-
-            self.sampler.run_mcmc(p0,self.config['NBURN'],thin=self.config['NTHIN'])#burn in
-            p0=self.sampler.chain[:,-1,:].squeeze()
+                self.sampler=emcee.EnsembleSampler(nwalkers=self.config['NWALKERS'],
+                                                   dim=ndim,
+                                                   lnpostfn=lnprob,
+                                                   args=args,
+                                                   threads=self.config['THREADS'])
+            if self.config['SAMPLER']=='PARALLELTEMPERING':
+                p0=np.array([p0 for m in range(self.config['NTEMPS']) ])
+            self.sampler.run_mcmc(p0,self.config['NBURN'],thin=self.config['NTHIN'])
+            if self.config['SAMPLER']=='PARALLELTEMPERING':
+                p0=self.sampler.chain[:,:,-1,:]
+            else:
+                p0=self.sampler.chain[:,-1,:].squeeze()
             self.sampler.reset()
             self.sampler.run_mcmc(p0,self.config['NSTEPS'],thin=self.config['NTHIN'])
         if not os.path.exists(self.config['PROJECT_NAME']):
@@ -261,7 +270,8 @@ class Sampler():
             yaml.dump(self.params_all,yaml_file,default_flow_style=False)
         yaml_file.close()
         self.sampled=True
-        if self.config['COMPUTECOVARIANCE']:
+        if self.config['COMPUTECOVARIANCE'] and\
+         self.config['SAMPLER']=='ENSEMBLESAMPLER':
             self.acors=self.sampler.acor.astype(int)
             #estimate covariance
             self.cov_samples=np.zeros((len(self.params_vary),
@@ -274,10 +284,10 @@ class Sampler():
                     self.cov_samples[i,j]=np.mean((csample_i-csample_i.mean())\
                     *(csample_j-csample_j.mean()))
             self.evidence=np.exp(self.ln_ml)/np.sqrt(np.linalg.det(self.cov_samples))#compute conservative evidence without prior factor
-            np.save(self.config['PROJECT_NAME']+'/output.npz',
+            np.savez(self.config['PROJECT_NAME']+'/output.npz',
             chain=self.sampler.chain,evidence=self.evidence,cov_samples=self.cov_samples,autocorrs=self.acors)
         else:
-            np.save(self.config['PROJECT_NAME']+'/output.npz',chain=self.sampler.chain)
+            np.savez(self.config['PROJECT_NAME']+'/output.npz',chain=self.sampler.chain)
 
 
 '''
