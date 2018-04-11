@@ -6,7 +6,7 @@ MPI: False #determine whether to use MPI
 THREADS: 4 #number of threads to run
 NSTEPS: 10000 #number of steps for each sampler
 NWALKERS: 20 #number of MCMC walkers
-PROJECT_NAME: test_mcmc #name of output file.
+PROJECT_NAME: test_mcmc_pt #name of output file.
 NPTS_NOISE_EST: 20 #number of points to estimate std from
 MPI: False #set to true if you are using open MPI
 SAMPLE_BALL: .01 #fractional standard deviation of gaussian ball to Initialize walkers
