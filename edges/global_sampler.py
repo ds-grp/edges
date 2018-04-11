@@ -15,6 +15,7 @@ except ImportError:
 F21=1420405751.7667#21 cm frequency.
 import copy,sys,os
 import scipy.optimize as op
+import ptemcee
 
 
 def delta_Tb_analytic(freq,**kwargs):
@@ -152,7 +153,7 @@ class Sampler():
         #and set all other parameters to default starting values
         self.params_all=self.config['PARAMS']
         self.params_vary=self.config['PARAMS2VARY']
-        self.params_vary_priors=self.config['PRIORS']
+        self.priors=self.config['PRIORS']
         self.resid=np.zeros_like(self.var_tb)
         self.model=np.zeros_like(self.resid)
 
@@ -177,7 +178,7 @@ class Sampler():
         self.ml_params=result
         self.resid=self.tb_meas-self.model
         self.ln_ml=lnprob(result,self.freqs,self.tb_meas,
-        self.var_tb,self.params_all,param_list,self.params_vary_priors)
+        self.var_tb,self.params_all,param_list,self.priors)
 
 
     def approximate_ml(self):
@@ -217,27 +218,37 @@ class Sampler():
             *self.config['SAMPLE_BALL']+1.)*pml[pnum]
         args=(self.freqs,self.tb_meas,self.var_tb,
         self.params_all,self.params_vary,
-        self.params_vary_priors)
+        self.priors)
         if self.config['MPI']:
             from emcee.utils import MPIPool
             pool=MPIPool()
             if not pool.is_master():
                 pool.wait()
                 sys.exit(0)
-            self.sampler=emcee.EnsembleSampler(nwalkers,ndim,lnprob,
-            args=args,pool=pool)
+                self.sampler=emcee.EnsembleSampler(nwalkers,ndim,lnprob,
+                args=args,pool=pool)
             self.sampler.run_mcmc(p0,self.config['NBURN'])#burn in
             p0=self.sampler.chain[:,-1,:].squeeze()
             self.sampler.reset()
             self.sampler.run_mcmc(p0,self.config['NSTEPS'])
             pool.close()
         else:
-            self.sampler=emcee.EnsembleSampler(nwalkers,ndim,lnprob,
-            args=args,threads=self.config['THREADS'])
-            self.sampler.run_mcmc(p0,self.config['NBURN'])#burn in
+            if self.config['SAMPLER']=='PARALLELTEMPERING':
+                def lnprior():
+                likelihood=lambda x: lnlike(x,self.freqs,self.tb_meas,
+                self.var_tb,self.params_all,self.params_vary)
+                prior=lambda x: lnprior(x,self.params_vary,self.params_priors)
+                self.sample=ptemcee.Sampler(self.config['NTEMPS'],
+                self.config['NWALKERS'],len(self.params2vary),likelihood,prior)
+                )
+            else:
+                self.sampler=emcee.EnsembleSampler(nwalkers,ndim,lnprob,
+                args=args,threads=self.config['THREADS'])
+
+            self.sampler.run_mcmc(p0,self.config['NBURN'],thin=self.config['NTHIN'])#burn in
             p0=self.sampler.chain[:,-1,:].squeeze()
             self.sampler.reset()
-            self.sampler.run_mcmc(p0,self.config['NSTEPS'])
+            self.sampler.run_mcmc(p0,self.config['NSTEPS'],thin=self.config['NTHIN'])
         if not os.path.exists(self.config['PROJECT_NAME']):
             os.makedirs(self.config['PROJECT_NAME'])
         #save output and configuration
