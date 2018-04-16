@@ -9,3 +9,9 @@ EDGES TO-DO LIST
 - Simplify parameters, NPOLY is redundant with list of polynomial terms in
   params_2_vary and param_priors. We should get rid of params_2_vary and only
   changes params_vary_priors to something like "params_vary"
+-Understand why intermediate temperatures are poorly conditioned and whether
+ this is a problem.
+-Reduce temperature range for ensemble sampler.
+-Understand thermodynamic integration (and normalization)?
+-Compute evidence for various polynomial orders once we have evidence working
+ and also have good prior choices.
