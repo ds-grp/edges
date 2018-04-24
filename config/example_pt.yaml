@@ -17,6 +17,8 @@ COMPUTECOVARIANCE: False
 SAMPLER: PARALLELTEMPERING
 NTEMPS: 20 #number of temperatures for parallel temperating
 NTHIN: 1 #store ever N result in chain
+FGMODL: POLYNOMIAL #"POLYNOMIAL" for polynomial model, "PHYSICAL" for physical
+                   #model.
 #**************************************************
 #We specify the default values of all model parameters
 #in this section, including the parameters that we are
@@ -24,72 +26,57 @@ NTHIN: 1 #store ever N result in chain
 #parameters to fit.
 #**************************************************
 PARAMS: #this section specifies settings for all model parameters
-    NU0: 78.3 #Analytic central frequency
-    TAU: 6.5  #flatness parameter
-    A:  .520 #Amplitude parameter
-    W:  20.7  #Width parameter.
-    NPOLY: 5
-    APOLY0: 1700.
-    APOLY1: 600.
-    APOLY2: -1200.
-    APOLY3: 750.
-    APOLY4: -175.
-#**************************************************
-#PARAMS2VARY is a list of parameter names that will
-#be fit by the MCMC.
-#**************************************************
-PARAMS2VARY: #specify the names of parameters that will be fitted
-    - NU0
-    - TAU
-    - A
-    - W
-    - APOLY0
-    - APOLY1
-    - APOLY2
-    - APOLY3
-    - APOLY4
-#**************************************************
-#PRIORS specifies prior distributions on our fitting
-#parameters.
-#For each parameter, specify TYPE which can be
-#UNIFORM, GAUSSIAN, or LOGNORMAL
-#For UNIFORM priors, specify MIN and MAX value.
-#For LOGNORMAL or GAUSSIAN priors, specify MEAN, VAR
-#**************************************************
-PRIORS:
-  NU0:
-    TYPE: UNIFORM
-    MIN: 0.
-    MAX: 1000.
-  TAU:
-    TYPE: UNIFORM
-    MIN: -100.
-    MAX: 1000.
-  A:
-    TYPE: UNIFORM
-    MIN: 0.
-    MAX: 1000.
-  W:
-    TYPE: UNIFORM
-    MIN: 0.
-    MAX: 1000.
-  APOLY0:
-    TYPE: UNIFORM
-    MIN: -10000
-    MAX: 10000
-  APOLY1:
-    TYPE: UNIFORM
-    MIN: -10000
-    MAX: 10000
-  APOLY2:
-    TYPE: UNIFORM
-    MIN: -10000
-    MAX: 10000
-  APOLY3:
-    TYPE: UNIFORM
-    MIN: -10000
-    MAX: 10000
-  APOLY4:
-    TYPE: UNIFORM
-    MIN: -10000
-    MAX: 10000
+    NU0:
+      TYPE: VARY
+      P0: 78.3
+      PRIOR: UNIFORM
+      MIN: 0.
+      MAX: 1000.
+    TAU:
+      TYPE: VARY
+      P0: 6.5
+      PRIOR: UNIFORM
+      MIN: -100
+      MAX: 10000
+    A:
+      TYPE: VARY
+      P0: .520
+      PRIOR: UNIFORM
+      MIN: 0.
+      MAX: 1000.
+    W:
+      TYPE: VARY
+      P0:  20.7
+      PRIOR: UNIFORM
+      MIN: 0.
+      MAX: 1000.
+    AFG0:
+      TYPE: VARY
+      P0: 1700.
+      PRIOR: UNIFORM
+      MIN: -10000
+      MAX: 10000
+    AFG1:
+      TYPE: VARY
+      P0: 600.
+      PRIOR: UNIFORM
+      MIN: -10000
+      MAX: 10000
+    AFG2:
+      TYPE: VARY
+      P0: -1200.
+      PRIOR: UNIFORM
+      MIN: -10000
+      MAX: 10000
+    AFG3:
+      TYPE: VARY
+      P0: 750.
+      PRIOR: UNIFORM
+      MIN: -10000
+      MAX: 10000
+    AFG4:
+      TYPE: VARY
+      P0: -175.
+      PRIOR: UNIFORM
+      MIN: -10000
+      MAX: 10000

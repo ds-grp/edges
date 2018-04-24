@@ -52,21 +52,26 @@ def var_resid(resid_array,window_length=20):
     np.abs(resid_array-np.mean(resid_array))**2.,mode='same')
 
 def Tbfg(x,params_dict):
-    y_model=params_dict['APOLY0']*(x/x[int(len(x)/2)])**(-2.5)
-    for n in range(1,int(params_dict['NPOLY'])):
-        y_model+=params_dict['APOLY'+str(n)]*(x/x[int(len(x)/2)])**(n-2.5)
+    y_model=0
+    for param in params_dict.keys():
+        if 'AFG' in param:
+            polynum=int(param[3:])
+            y_model+=params_dict[param]*(x/x[int(len(x)/2)])**(polynum-2.5)
     return y_model
 
 def Tb21(x,params_dict):
     y_model=delta_Tb_analytic(x,**params_dict)
     return y_model
 
-def TbSky(params,x,params_dict,param_list):
+def TbSky(params,x,params_dict,param_list,fgmodel='POLYNOMIAL'):
     param_instance=copy.deepcopy(params_dict)
     for param,param_key in zip(params,param_list):
         param_instance[param_key]=param
-    y_model=Tb21(x,param_instance)\
-    +Tbfg(x,param_instance)
+    y_model=Tb21(x,param_instance)
+    if fgmodel=='POLYNOMIAL':
+        y_model=y_model+Tbfg(x,param_instance)
+    elif fgmodel=='PHYSICAL':
+        y_model=y_model+Tbfg_physical(x,param_instance)
     return y_model
 
 def lnlike(params,x,y,yvar,param_template,param_list):
@@ -93,15 +98,15 @@ def lnprior(params,param_list,param_priors):
     '''
     output=0.
     for param,param_key in zip(params,param_list):
-        if param_priors[param_key]['TYPE']=='UNIFORM':
+        if param_priors[param_key]['PRIOR']=='UNIFORM':
             if param <= param_priors[param_key]['MIN'] or \
             param >= param_priors[param_key]['MAX']:
                  output-=np.inf
-        elif param_priors[param_key]['TYPE']=='GAUSSIAN':
+        elif param_priors[param_key]['PRIOR']=='GAUSSIAN':
             var=param_priors[param_key]['VAR']
             mu=param_priors[param_key]['MEAN']
             output+=-.5*((param-mu)**2./var-np.log(2.*PI*var))
-        elif param_priors[param_key]['TYPE']=='LOGNORMAL':
+        elif param_priors[param_key]['PRIOR']=='LOGNORMAL':
             var=param_priors[param_key]['VAR']
             mu=param_priors[param_key]['MEAN']
             output+=-.5*((np.log(param)-mu)**2./var-np.log(2.*PI*var))\
@@ -153,9 +158,14 @@ class Sampler():
         window_length=self.config['NPTS_NOISE_EST'])#Calculate std of residuals
         #read list of parameters to vary from config file,
         #and set all other parameters to default starting values
-        self.params_all=self.config['PARAMS']
-        self.params_vary=self.config['PARAMS2VARY']
-        self.priors=self.config['PRIORS']
+        self.params=self.config['PARAMS']
+        self.params_all={}
+        self.params_vary={}
+        #populate params_all
+        for param in self.params:
+            if self.params[param]['TYPE']=='VARY':
+                self.params_all[param]=self.params[param]['P0']
+                self.params_vary[param]=self.params[param]
         self.ndim=len(self.params_vary)
         self.resid=np.zeros_like(self.var_tb)
         self.model=np.zeros_like(self.resid)
@@ -170,6 +180,7 @@ class Sampler():
         '''
         if param_list is None:
             param_list=self.params_vary
+        #print(param_list)
         nll = lambda *args: -lnlike(*args)
         result = op.minimize(nll,
         [self.params_all[pname] for pname in param_list],
@@ -181,15 +192,15 @@ class Sampler():
         self.ml_params=result
         self.resid=self.tb_meas-self.model
         self.ln_ml=lnprob(result,self.freqs,self.tb_meas,
-        self.var_tb,self.params_all,param_list,self.priors)
+        self.var_tb,self.params_all,self.params_vary.keys(),self.params_vary)
 
 
     def approximate_ml(self):
-        if self.params_all['NPOLY']>0:
+        if 'AFG0' in self.params_all.keys():
             params_nofg=[]
             params_fg=[]
             for pname in self.params_vary:
-                if 'APOLY' not in pname:
+                if 'AFG' not in pname:
                     params_nofg=params_nofg+[pname]
                 else:
                     params_fg=params_fg+[pname]
@@ -211,17 +222,18 @@ class Sampler():
         #first make sure that the maximum likelihood params are fitted
         if not self.minimized:
             self.approximate_ml()
-        print(self.params_all)
+        #print(self.params_all)
         ndim,nwalkers=len(self.params_vary),self.config['NWALKERS']
         p0=np.zeros((nwalkers,len(self.params_vary)))
-
         pml=[self.params_all[pname] for pname in self.params_vary]
         for pnum,pname in enumerate(self.params_vary):
             p0[:,pnum]=(np.random.randn(nwalkers)\
             *self.config['SAMPLE_BALL']+1.)*pml[pnum]
+        plist=[]
+        for key in self.params_vary.keys():
+            plist.append(key)
         args=(self.freqs,self.tb_meas,self.var_tb,
-        self.params_all,self.params_vary,
-        self.priors)
+        self.params_all,plist,self.params_vary)
         if self.config['MPI']:
             from emcee.utils import MPIPool
             pool=MPIPool()
@@ -239,7 +251,7 @@ class Sampler():
             if self.config['SAMPLER']=='PARALLELTEMPERING':
                 logl=lambda x: lnlike(x,self.freqs,self.tb_meas,
                 self.var_tb,self.params_all,self.params_vary)
-                logp=lambda x: lnprior(x,self.params_vary,self.priors)
+                logp=lambda x: lnprior(x,self.params_vary.keys(),self.params_vary)
                 self.sampler=ptemcee.Sampler(ntemps=self.config['NTEMPS'],
                                             nwalkers=self.config['NWALKERS'],
                                             dim=self.ndim,
