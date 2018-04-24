@@ -119,7 +119,7 @@ class Sampler():
     '''
     Class for running MCMC and storing output.
     '''
-    def __init__(self,config_file,verbose=False):
+    def __init__(self,config,verbose=False):
         '''
         Initialize the sampler.
         Args:
@@ -129,9 +129,11 @@ class Sampler():
         self.minimized=False
         self.ln_ml=-np.inf
         self.sampled=False
-        with open(config_file, 'r') as ymlfile:
-            self.config= yaml.load(ymlfile)
-        ymlfile.close()
+        if type(config) is dict:
+            self.config = config
+        else:
+            with open(config_file, 'r') as ymlfile:
+                self.config = yaml.load(ymlfile)
         #read in measurement file
         #Assume first column is frequency, second column is measured brightness temp
         #and third column is the residual from fitting an empirical model
@@ -245,8 +247,8 @@ class Sampler():
                                             logp=logp)
             else:
                 self.sampler=emcee.EnsembleSampler(nwalkers=self.config['NWALKERS'],
-                                                   dim=ndim,
-                                                   lnpostfn=lnprob,
+                                                   ndim=ndim,
+                                                   log_prob_fn=lnprob,
                                                    args=args,
                                                    threads=self.config['THREADS'])
             if self.config['SAMPLER']=='PARALLELTEMPERING':
