@@ -1,6 +1,30 @@
 import numpy as np
 
 
+def model_fg_poly(nus, *parameters):
+    """Polynomial foreground model, taken from Eq. (2) of Bowman+ (2018).
+
+    Parameters
+    ----------
+    nus : 1D-array of floats
+        Input frequencies in MHz
+
+    parameters: Sequence of floats
+        Polynomial coefficients for Eq. (2)
+
+    Returns
+    -------
+    t_fg : 1D-array of floats, same shaps as nus
+    """
+    nu_c = nus/75.
+
+    t_fg = np.zeros_like(nus, dtype=np.float64)
+    for i, p in enumerate(parameters):
+        t_fg += p * nu_c**(float(i) - 2.5)
+
+    return t_fg
+
+
 def model_fg_phys(nus, *parameters):
     """Physically motivated model, Eq. (1) in the paper.
     All frequencies are handled in MHz
@@ -8,10 +32,10 @@ def model_fg_phys(nus, *parameters):
     Parameters
     ----------
     nus : 1D-array of floats
-    Input frequencies in MHz
+        Input frequencies in MHz
 
     parameters: Sequence of floats
-    Model coefficients a0 to a4 from Eq. (1)
+        Model coefficients a0 to a4 from Eq. (1)
 
     Returns
     -------
