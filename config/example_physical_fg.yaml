@@ -1,0 +1,83 @@
+#*************************************************
+#The following parameters are general run settings.
+#*************************************************
+DATAFILE: ../data/processed/bowman_2018_fg_and_t21.csv #global signal data file
+MPI: False #determine whether to use MPI
+THREADS: 4 #number of threads to run
+NSTEPS: 10000 #number of steps for each sampler
+NWALKERS: 20 #number of MCMC walkers
+PROJECT_NAME: test_mcmc #name of output file.
+NPTS_NOISE_EST: 20 #number of points to estimate std from
+MPI: False #set to true if you are using open MPI
+SAMPLE_BALL: .01 #fractional standard deviation of gaussian ball to Initialize walkers
+NBURN: 10000      #number of burn points per walker.
+FMIN: 60. #minimum frequency (MHz)
+FMAX: 94. #maximum frequency (MHz)
+COMPUTECOVARIANCE: False
+SAMPLER: ENSEMBLESAMPLER
+NTEMPS: 20 #number of temperatures for parallel temperating
+NTHIN: 1 #store ever N result in chain
+FGMODL: POLYNOMIAL #"POLYNOMIAL" for polynomial model, "PHYSICAL" for physical
+                   #model.
+SIGMODL: BOXGAUSS
+#**************************************************
+#We specify the default values of all model parameters
+#in this section, including the parameters that we are
+#not fitting. The next section specifies the names of
+#parameters to fit.
+#**************************************************
+PARAMS: #this section specifies settings for all model parameters
+    NU0:
+      TYPE: VARY
+      P0: 78.3
+      PRIOR: UNIFORM
+      MIN: 0.
+      MAX: 250.
+    TAU:
+      TYPE: VARY
+      P0: 6.5
+      PRIOR: UNIFORM
+      MIN: -100
+      MAX: 10000
+    A:
+      TYPE: VARY
+      P0: .520
+      PRIOR: UNIFORM
+      MIN: 0.
+      MAX: 100.
+    W:
+      TYPE: VARY
+      P0:  20.7
+      PRIOR: UNIFORM
+      MIN: 0.
+      MAX: 250.
+    AFG0:
+      TYPE: VARY
+      P0: 280.
+      PRIOR: LOGNORMAL
+      MEAN: 5.634
+      VAR: 0.002
+    AFG1:
+      TYPE: VARY
+      P0: -2.5
+      PRIOR: NORMAL
+      MEAN: -2.5
+      VAR: 0.01
+    AFG2:
+      TYPE: VARY
+      P0: -0.08
+      PRIOR: NORMAL
+      MEAN: -0.08
+      VAR: 0.0036
+    AFG3:
+      TYPE: VARY
+      P0: 0.00069
+      PRIOR: LOGNORMAL
+      MEAN: 0.00069
+      VAR: 0.000000325
+    AFG4:
+      TYPE: VARY
+      P0: 1000.
+      PRIOR: LOGNORMAL
+      MEAN: 6.66
+      VAR: 0.495

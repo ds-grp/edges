@@ -72,6 +72,16 @@ def Tb21(x, params_dict):
     y_model = delta_Tb_analytic(x, **params_dict)
     return y_model
 
+def Tbfg_physical(x,params):
+    '''
+    physical foreground model
+    x is frequency in units of MHz.
+    params: dictionary of parameters
+    '''
+    x150=x/150.
+    fgs=params['AFG0']*(x150)**(params['AFG1']+params['AFG2']*np.log(x150)**2.)
+    fgs=fgs*(params['AFG3'])**(x150**-2.)+params['AFG4']*x150**-2.
+    return fgs
 
 def TbSky(
         params, x, params_dict, param_list,
