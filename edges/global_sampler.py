@@ -149,7 +149,7 @@ def lnprior(params, param_list, param_priors):
 
 
 def lnprob(
-        params, x, y, yvar, param_template, param_list, param_priors
+        params, x, y, yvar, param_template, param_list, param_priors,
         fg_model, sig_model):
     lp = lnprior(params, param_list, param_priors)
     if not np.isfinite(lp):
@@ -197,8 +197,6 @@ class Sampler():
         self.data = np.array(self.data)
 
         # Constrain frequency range that is used for the fit
-        print(self.data[:, 0].shape, self.config['FMIN'])
-
         select = (
             (self.data[:, 0] >= self.config['FMIN']) &
             (self.data[:, 0] <= self.config['FMAX']))
@@ -261,7 +259,8 @@ class Sampler():
         self.resid = self.tb_meas-self.model
         self.ln_ml = lnprob(
             result, self.freqs, self.tb_meas, self.var_tb,
-            self.params_all, self.params_vary.keys(), self.params_vary)
+            self.params_all, self.params_vary.keys(), self.params_vary,
+            self.fg_model, self.sig_model)
 
     def approximate_ml(self):
         if 'AFG0' in self.params_all.keys():
@@ -306,7 +305,8 @@ class Sampler():
 
         args = (
             self.freqs, self.tb_meas, self.var_tb,
-            self.params_all, plist, self.params_vary)
+            self.params_all, plist, self.params_vary,
+            self.fg_model, self.sig_model)
 
         if self.config['MPI']:
             from emcee.utils import MPIPool
@@ -327,60 +327,90 @@ class Sampler():
             self.sampler.run_mcmc(p0, self.config['NSTEPS'])
             pool.close()
         else:
-            if self.config['SAMPLER']=='PARALLELTEMPERING':
-                logl=lambda x: lnlike(x,self.freqs,self.tb_meas,
-                self.var_tb,self.params_all,self.params_vary)
-                logp=lambda x: lnprior(x,self.params_vary.keys(),self.params_vary)
-                self.sampler=ptemcee.Sampler(ntemps=self.config['NTEMPS'],
-                                            nwalkers=self.config['NWALKERS'],
-                                            dim=self.ndim,
-                                            logl=logl,
-                                            logp=logp)
+            if self.config['SAMPLER'] == 'PARALLELTEMPERING':
+                logl = lambda x: lnlike(
+                    x, self.freqs, self.tb_meas,
+                    self.var_tb, self.params_all, self.params_vary,
+                    self.fg_model, self.sig_model)
+
+                logp = lambda x: lnprior(
+                    x, self.params_vary.keys(), self.params_vary)
+
+                self.sampler = ptemcee.Sampler(
+                    ntemps=self.config['NTEMPS'],
+                    nwalkers=self.config['NWALKERS'],
+                    dim=self.ndim,
+                    logl=logl,
+                    logp=logp)
             else:
-                self.sampler=emcee.EnsembleSampler(nwalkers=self.config['NWALKERS'],
-                                                   ndim=ndim,
-                                                   log_prob_fn=lnprob,
-                                                   args=args,
-                                                   threads=self.config['THREADS'])
-            if self.config['SAMPLER']=='PARALLELTEMPERING':
-                p0=np.array([p0 for m in range(self.config['NTEMPS']) ])
-            self.sampler.run_mcmc(p0,self.config['NBURN'],thin=self.config['NTHIN'])
-            if self.config['SAMPLER']=='PARALLELTEMPERING':
-                p0=self.sampler.chain[:,:,-1,:]
+                self.sampler = emcee.EnsembleSampler(
+                        nwalkers=self.config['NWALKERS'],
+                        ndim=ndim,
+                        log_prob_fn=lnprob,
+                        args=args,
+                        threads=self.config['THREADS'])
+
+            # If we use PT sampling, we need a further dimension of
+            # start parameters for the different temperatures
+            if self.config['SAMPLER'] == 'PARALLELTEMPERING':
+                p0 = np.array([p0 for m in range(self.config['NTEMPS'])])
+
+            self.sampler.run_mcmc(
+                p0,
+                self.config['NBURN'],
+                thin=self.config['NTHIN'])
+
+            if self.config['SAMPLER'] == 'PARALLELTEMPERING':
+                p0 = self.sampler.chain[:, :, -1, :]
             else:
-                p0=self.sampler.chain[:,-1,:].squeeze()
+                p0 = self.sampler.chain[:, -1, :].squeeze()
             self.sampler.reset()
-            self.sampler.run_mcmc(p0,self.config['NSTEPS'],thin=self.config['NTHIN'])
+            self.sampler.run_mcmc(
+                p0, self.config['NSTEPS'], thin=self.config['NTHIN'])
+
         if not os.path.exists(self.config['PROJECT_NAME']):
             os.makedirs(self.config['PROJECT_NAME'])
-        #save output and configuration
-        with open(self.config['PROJECT_NAME']+'/config.yaml','w')\
-         as yaml_file:
-            yaml.dump(self.config,yaml_file,default_flow_style=False)
-        yaml_file.close()
-        with open(self.config['PROJECT_NAME']+'/ml_params.yaml','w')\
-         as yaml_file:
-            yaml.dump(self.params_all,yaml_file,default_flow_style=False)
-        yaml_file.close()
-        self.sampled=True
-        if self.config['COMPUTECOVARIANCE'] and\
-         self.config['SAMPLER']=='ENSEMBLESAMPLER':
-            self.acors=self.sampler.acor.astype(int)
-            #estimate covariance
-            self.cov_samples=np.zeros((len(self.params_vary),
-            len(self.params_vary)))
+
+        # Save output and configuration
+        with open(self.config['PROJECT_NAME']+'/config.yaml', 'w') as f:
+            yaml.dump(self.config, f, default_flow_style=False)
+
+        with open(
+                self.config['PROJECT_NAME']+'/ml_params.yaml', 'w') as f:
+            yaml.dump(self.params_all, f, default_flow_style=False)
+
+        self.sampled = True
+        if (
+                self.config['COMPUTECOVARIANCE'] &
+                (self.config['SAMPLER'] == 'ENSEMBLESAMPLER')):
+
+            self.acors = self.sampler.acor.astype(int)
+
+            # Estimate covariance
+            self.cov_samples = np.zeros((
+                len(self.params_vary),
+                len(self.params_vary)))
+
             for i in range(len(self.params_vary)):
                 for j in range(len(self.params_vary)):
-                    stepsize=np.max([self.acors[i],self.acors[j]])
-                    csample_i=self.sampler.chain[i,::stepsize,:].flatten()
-                    csample_j=self.sampler.chain[j,::stepsize,:].flatten()
-                    self.cov_samples[i,j]=np.mean((csample_i-csample_i.mean())\
-                    *(csample_j-csample_j.mean()))
-            self.evidence=np.exp(self.ln_ml)/np.sqrt(np.linalg.det(self.cov_samples))#compute conservative evidence without prior factor
-            np.savez(self.config['PROJECT_NAME']+'/output.npz',
-            chain=self.sampler.chain,evidence=self.evidence,cov_samples=self.cov_samples,autocorrs=self.acors)
+                    stepsize = np.max([self.acors[i],self.acors[j]])
+                    csample_i = self.sampler.chain[i, ::stepsize, :].flatten()
+                    csample_j = self.sampler.chain[j, ::stepsize, :].flatten()
+                    self.cov_samples[i,j] = np.mean(
+                    (csample_i-csample_i.mean()) *(csample_j-csample_j.mean()))
+
+            # Compute conservative evidence without prior factor
+            self.evidence = np.exp(self.ln_ml)/np.sqrt(np.linalg.det(self.cov_samples))
+            np.savez(
+                self.config['PROJECT_NAME']+'/output.npz',
+                chain=self.sampler.chain,
+                evidence=self.evidence,
+                cov_samples=self.cov_samples,
+                autocorrs=self.acors)
         else:
-            np.savez(self.config['PROJECT_NAME']+'/output.npz',chain=self.sampler.chain)
+            np.savez(
+                self.config['PROJECT_NAME']+'/output.npz',
+                chain=self.sampler.chain)
 
 
 '''
@@ -390,13 +420,16 @@ if __name__ == "__main__":
     desc=('MCMC driver for fitting edges data.\n'
           'To run: mpirun -np <num_processes>'
           'python global_sampler.py -c <config_file>')
-    parser=argparse.ArgumentParser(description=desc)
-    parser.add_argument('-c','--config',
-    help='configuration file')
-    parser.add_argument('-v','--verbose',
-    help='print more output',action='store_true')
-    #parser.add_argument('-p','--progress',
-    #help='show progress bar',action='store_true')
-    args=parser.parse_args()
-    my_sampler=Sampler(args.config)
+
+    parser = argparse.ArgumentParser(description=desc)
+
+    parser.add_argument('-c', '--config', help='configuration file')
+
+    parser.add_argument(
+        '-v', '--verbose',
+        help='print more output', action='store_true')
+    # parser.add_argument('-p','--progress',
+    # help='show progress bar',action='store_true')
+    args = parser.parse_args()
+    my_sampler = Sampler(args.config)
     my_sampler.sample()
