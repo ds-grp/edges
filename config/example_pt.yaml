@@ -19,6 +19,7 @@ NTEMPS: 20 #number of temperatures for parallel temperating
 NTHIN: 1 #store ever N result in chain
 FGMODL: POLYNOMIAL #"POLYNOMIAL" for polynomial model, "PHYSICAL" for physical
                    #model.
+SIGMODL: BOXGAUSS
 #**************************************************
 #We specify the default values of all model parameters
 #in this section, including the parameters that we are
