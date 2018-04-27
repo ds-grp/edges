@@ -72,6 +72,7 @@ def Tb21(x, params_dict):
     y_model = delta_Tb_analytic(x, **params_dict)
     return y_model
 
+
 def Tbfg_physical(x,params):
     '''
     physical foreground model
@@ -365,11 +366,13 @@ class Sampler():
             if self.config['SAMPLER'] == 'PARALLELTEMPERING':
                 p0 = np.array([p0 for m in range(self.config['NTEMPS'])])
 
+            # Run the MCMC for the burn-in
             self.sampler.run_mcmc(
                 p0,
                 self.config['NBURN'],
                 thin=self.config['NTHIN'])
 
+            # Reset after burn-in and run the full chain
             if self.config['SAMPLER'] == 'PARALLELTEMPERING':
                 p0 = self.sampler.chain[:, :, -1, :]
             else:
@@ -378,6 +381,7 @@ class Sampler():
             self.sampler.run_mcmc(
                 p0, self.config['NSTEPS'], thin=self.config['NTHIN'])
 
+        # Create output directory
         if not os.path.exists(self.config['PROJECT_NAME']):
             os.makedirs(self.config['PROJECT_NAME'])
 
@@ -390,37 +394,53 @@ class Sampler():
             yaml.dump(self.params_all, f, default_flow_style=False)
 
         self.sampled = True
+
+        # Collect result parameters
+        resultdict = {}
+
+        resultdict['chain'] = self.sampler.chain,
+
         if (
                 self.config['COMPUTECOVARIANCE'] &
                 (self.config['SAMPLER'] == 'ENSEMBLESAMPLER')):
 
+            # Estimate autocorrelation
             self.acors = self.sampler.acor.astype(int)
+            resultdict['autocorrs'] = self.acors
 
             # Estimate covariance
             self.cov_samples = np.zeros((
                 len(self.params_vary),
                 len(self.params_vary)))
+            resultdict['cov_samples'] = self.cov_samples
 
             for i in range(len(self.params_vary)):
                 for j in range(len(self.params_vary)):
-                    stepsize = np.max([self.acors[i],self.acors[j]])
+                    stepsize = np.max([self.acors[i], self.acors[j]])
                     csample_i = self.sampler.chain[i, ::stepsize, :].flatten()
                     csample_j = self.sampler.chain[j, ::stepsize, :].flatten()
-                    self.cov_samples[i,j] = np.mean(
-                    (csample_i-csample_i.mean()) *(csample_j-csample_j.mean()))
+                    self.cov_samples[i, j] = np.mean(
+                        (csample_i-csample_i.mean()) *
+                        (csample_j-csample_j.mean()))
 
             # Compute conservative evidence without prior factor
-            self.evidence = np.exp(self.ln_ml)/np.sqrt(np.linalg.det(self.cov_samples))
-            np.savez(
-                self.config['PROJECT_NAME']+'/output.npz',
-                chain=self.sampler.chain,
-                evidence=self.evidence,
-                cov_samples=self.cov_samples,
-                autocorrs=self.acors)
-        else:
-            np.savez(
-                self.config['PROJECT_NAME']+'/output.npz',
-                chain=self.sampler.chain)
+            self.conservative_evidence = np.exp(self.ln_ml)/np.sqrt(
+                np.linalg.det(self.cov_samples))
+            resultdict['conservative_evidence'] = self.conservative_evidence
+
+        # Save the evidence from thermodynamic integration from the
+        # PT sampler
+        if self.config['SAMPLER'].lower() == 'paralleltempering':
+            self.logz, self.dlogz = self.sampler.log_evidence_estimate(
+                fburnin=0.)
+
+            resultdict['log_thd_evidence'] = self.logz
+            resultdict['dlog_thd_evidence'] = self.dlogz
+
+        # Save as .npz
+        np.savez(
+            os.path.join(self.config['PROJECT_NAME'], '/output.npz'),
+            **resultdict)
 
 
 '''
