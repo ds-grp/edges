@@ -386,11 +386,12 @@ class Sampler():
             os.makedirs(self.config['PROJECT_NAME'])
 
         # Save output and configuration
-        with open(self.config['PROJECT_NAME']+'/config.yaml', 'w') as f:
+        with open(os.path.join(
+                self.config['PROJECT_NAME'], 'config.yaml'), 'w') as f:
             yaml.dump(self.config, f, default_flow_style=False)
 
-        with open(
-                self.config['PROJECT_NAME']+'/ml_params.yaml', 'w') as f:
+        with open(os.path.join(
+                self.config['PROJECT_NAME'], 'ml_params.yaml'), 'w') as f:
             yaml.dump(self.params_all, f, default_flow_style=False)
 
         self.sampled = True
@@ -439,7 +440,7 @@ class Sampler():
 
         # Save as .npz
         np.savez(
-            os.path.join(self.config['PROJECT_NAME'], '/output.npz'),
+            os.path.join(self.config['PROJECT_NAME'], 'output.npz'),
             **resultdict)
 
 
