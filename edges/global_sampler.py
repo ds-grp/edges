@@ -251,13 +251,13 @@ class Sampler():
         if param_list is None:
             param_list = self.params_vary
 
-        nll = lambda *args: -lnlike(*args)
+        nll = lambda *args: -lnprob(*args)
         result = op.minimize(
             nll,
             [self.params_all[pname] for pname in param_list],
             args=(
                 self.freqs, self.tb_meas,
-                self.var_tb, self.params_all, param_list,
+                self.var_tb, self.params_all, param_list, self.params_vary,
                 self.fg_model, self.sig_model))["x"]
 
         for pnum, pname in enumerate(param_list):
