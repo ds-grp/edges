@@ -140,21 +140,39 @@ def lnprior(params, param_list, param_priors):
     '''
     output = 0.
     for param, param_key in zip(params, param_list):
+
+        # Uniform priors
         if param_priors[param_key]['PRIOR'] == 'UNIFORM':
             if (
                     param <= param_priors[param_key]['MIN'] or
                     param >= param_priors[param_key]['MAX']):
-                output -= np.inf
+                return -np.inf
+
+        # Normal priors
         elif param_priors[param_key]['PRIOR'] == 'GAUSSIAN':
             var = param_priors[param_key]['VAR']
             mu = param_priors[param_key]['MEAN']
-            output += -.5*((param-mu)**2./var-np.log(2.*PI*var))
+            val = -.5*((param-mu)**2./var-np.log(2.*np.pi*var))
+            output += val
+
+        # Lognormal priors
         elif param_priors[param_key]['PRIOR'] == 'LOGNORMAL':
+            # Lognorm is not defined for values less than 0
+            if param < 0:
+                return -np.inf
+
             var = param_priors[param_key]['VAR']
             mu = param_priors[param_key]['MEAN']
-            output += (
+            val = (
                 -.5*((np.log(param)-mu)**2./var -
-                np.log(2.*PI*var)) - np.log(param))
+                np.log(2.*np.pi*var)) - np.log(param))
+
+            # This get triggered when we take the log of a negative parameter
+            # value.
+            if np.isnan(val):
+                return -np.inf
+
+            output += val
 
     return output
 
