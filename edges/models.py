@@ -36,6 +36,43 @@ def model_fg_phys(nus, *parameters):
         Input frequencies in MHz
 
     parameters: Sequence of floats
+        Model coefficients [b0, b1, b2, b3, T_e] from Eq. (6) in
+        Hills+ (2018)
+
+    Returns
+    -------
+    temp : 1D-array of floats, same shaps as nus
+    """
+
+    b0, b1, b2, b3, T_e = parameters
+
+    # Center of the band in MHz
+    nu_c = 75.
+
+    nu_norm = nus / nu_c
+    log_nu = np.log(nu_norm)
+
+    exp_term = np.exp(-b3*nu_norm**-2.)
+
+    term1 = b0 * nu_norm**(-2.5+b1+b2*log_nu) * exp_term
+
+    term2 = T_e * (1. - exp_term)
+
+    temp = term1 + term2
+
+    return temp
+
+
+def model_fg_phys_linearized(nus, *parameters):
+    """Linearized physical model, Eq. (1) in the paper.
+    All frequencies are handled in MHz
+
+    Parameters
+    ----------
+    nus : 1D-array of floats
+        Input frequencies in MHz
+
+    parameters: Sequence of floats
         Model coefficients a0 to a4 from Eq. (1)
 
     Returns
