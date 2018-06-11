@@ -24,16 +24,14 @@ import ptemcee
 F21 = 1420405751.7667  # 21 cm frequency
 
 
-def delta_Tb_analytic(freq, **kwargs):
+def delta_Tb_analytic(freq, nu0, tau, amp, w):
     '''
     Analytic function describing delta T_b
     '''
 
-    B = 4.*((freq-kwargs['NU0'])/kwargs['W'])**2.\
-    *np.log(-1./kwargs['TAU'] *
-    np.log((1.+np.exp(-kwargs['TAU']))/2.))
-    return -kwargs['A']*(1-np.exp(-kwargs['TAU']*np.exp(B)))\
-    /(1.-np.exp(-kwargs['TAU']))
+    B = 4.*((freq-nu0)/w)**2. * np.log(-1./tau * np.log((1.+np.exp(-tau))/2.))
+
+    return -amp*(1-np.exp(-tau*np.exp(B))) / (1.-np.exp(-tau))
 
 
 def var_resid(resid_array, window_length=20):
@@ -69,20 +67,30 @@ def Tbfg(x, params_dict):
 
 
 def Tb21(x, params_dict):
-    y_model = delta_Tb_analytic(x, **params_dict)
+    y_model = delta_Tb_analytic(
+        freq=x,
+        nu0=params_dict['NU0'],
+        tau=params_dict['TAU'],
+        amp=params_dict['A'],
+        w=params_dict['W'],)
+
     return y_model
 
 
-def Tbfg_physical(x,params):
+def Tbfg_physical(x, params):
     '''
     physical foreground model
     x is frequency in units of MHz.
     params: dictionary of parameters
     '''
-    x150=x/150.
-    fgs=params['AFG0']*(x150)**(params['AFG1']+params['AFG2']*np.log(x150)**2.)
-    fgs=fgs*(params['AFG3'])**(x150**-2.)+params['AFG4']*x150**-2.
+    x150 = x / 150.
+    fgs = (
+        params['AFG0'] *
+        (x150)**(params['AFG1']+params['AFG2']*np.log(x150)**2.))
+
+    fgs = fgs * (params['AFG3'])**(x150**-2.)+params['AFG4']*x150**-2.
     return fgs
+
 
 def TbSky(
         params, x, params_dict, param_list,

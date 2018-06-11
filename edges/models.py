@@ -16,11 +16,12 @@ def model_fg_poly(nus, *parameters):
     -------
     t_fg : 1D-array of floats, same shaps as nus
     """
-    nu_c = nus/75.
+    nu_c = nus[len(nus)//2]
 
     t_fg = np.zeros_like(nus, dtype=np.float64)
+
     for i, p in enumerate(parameters):
-        t_fg += p * nu_c**(float(i) - 2.5)
+        t_fg += p * (nus/nu_c)**(float(i) - 2.5)
 
     return t_fg
 
