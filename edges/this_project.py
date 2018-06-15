@@ -1,4 +1,8 @@
+import os
+
 import numpy as np
+
+PACKAGE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Best-fit parameters from Bowman+ (2018), taken from the triangle plot
 # (Figure 10)

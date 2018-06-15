@@ -1,5 +1,9 @@
+import os
+
 import numpy as np
 import pandas as pd
+
+from . import this_project as P
 
 
 def clean_fig1(df):
@@ -44,6 +48,8 @@ def fetch_fig1():
 
 
 def fetch_processed():
-    df = pd.read_csv('data/processed/bowman_2018_fg_and_t21.csv')
+    df = pd.read_csv(os.path.join(
+        P.PACKAGE_DIR,
+        '../data/processed/bowman_2018_fg_and_t21.csv'))
 
     return df

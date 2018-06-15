@@ -9,6 +9,7 @@ import os
 import yaml
 import argparse
 
+import pandas as pd
 import scipy.signal as signal
 import scipy.interpolate as interp
 import scipy.optimize as op
@@ -225,9 +226,9 @@ class Sampler():
         # measured brightness temp and third column is the residual from
         # fitting an empirical model (see Bowman+ 2018).
         if self.config['DATAFILE'].endswith('.csv'):
-            self.data = np.loadtxt(
+            self.data = pd.read_csv(
                 self.config['DATAFILE'],
-                skiprows=1, delimiter=',')
+                comment='#').values
         elif self.config['DATAFILE'].endswith('.npy'):
             self.data = np.load(self.config['DATAFILE'])
 
@@ -423,10 +424,15 @@ class Sampler():
         self.sampled = True
 
         # Collect result parameters
+        ###########################
         resultdict = {}
 
+        # Chain
+        #######
         resultdict['chain'] = self.sampler.chain,
 
+        # Conservative evidence
+        #######################
         if (
                 self.config['COMPUTECOVARIANCE'] &
                 (self.config['SAMPLER'] == 'ENSEMBLESAMPLER')):
@@ -455,14 +461,26 @@ class Sampler():
                 np.linalg.det(self.cov_samples))
             resultdict['conservative_evidence'] = self.conservative_evidence
 
-        # Save the evidence from thermodynamic integration from the
-        # PT sampler
+        # Evidence from thermodynamic integration from the PT sampler
+        #############################################################
         if self.config['SAMPLER'].lower() == 'paralleltempering':
             self.logz, self.dlogz = self.sampler.log_evidence_estimate(
                 fburnin=0.)
 
             resultdict['log_thd_evidence'] = self.logz
             resultdict['dlog_thd_evidence'] = self.dlogz
+
+        # Posterior mean
+        # The posterior mean values of the parameters
+        ###############
+        post_mean_vals = np.mean(self.sampler.flatchain, axis=0)
+        resultdict['post_mean_vals'] = post_mean_vals
+
+        # Likelihood
+        # The value of the posterior for the best-fit results
+        ############
+        logL = self.sampler.log_prob_fn(post_mean_vals)
+        resultdict['logL'] = logL
 
         # Save as .npz
         np.savez(

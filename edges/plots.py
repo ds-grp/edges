@@ -13,6 +13,45 @@ sns.set_palette('pastel')
 sns.set_style('whitegrid')
 
 
+def plot_sim(freqs, fg=None, signal=None, noise=None, outname=None):
+    """Plot a simulated sky signal, consisting of a required frequency array
+    and optionally foreground, signal, and noise."""
+
+    xlabel = r'$\nu\ [\rm MHz]$'
+    ylabel = r'$T_B\ [\rm K]$'
+
+    fig, (ax1, ax2, ax3) = plt.subplots(figsize=(12, 4), ncols=3)
+
+    total = np.sum(
+        [arr for arr in [fg, signal, noise] if arr is not None],
+        axis=0)
+
+    if fg is not None:
+        ax1.set_title('Foreground and total')
+        ax1.plot(freqs, fg, label='Foreground')
+        ax1.plot(freqs, total*1.1, label='Total x 1.1')
+        ax1.legend()
+        ax1.set_xlabel(xlabel)
+        ax1.set_ylabel(ylabel)
+
+    if signal is not None:
+        ax2.set_title('Signal')
+        ax2.plot(freqs, signal, label='Signal')
+        ax2.legend()
+        ax2.set_xlabel(xlabel)
+        ax2.set_ylabel(ylabel)
+
+    if signal is not None:
+        ax3.set_title('Noise')
+        ax3.plot(freqs, noise, label='Noise')
+        ax3.legend()
+        ax3.set_xlabel(xlabel)
+        ax3.set_ylabel(ylabel)
+
+    if outname is not None:
+        plt.savefig(outname, dpi=300)
+
+
 def plot_triangle(samples, labels, outname=None):
     """Generates a triangle plot from the MCMC chain
 
@@ -36,7 +75,19 @@ def plot_triangle(samples, labels, outname=None):
         plt.savefig(outname, dpi=300)
 
 
-def plot_example_chain(chain, pt=True, outname=None):
+def plot_all_chains(chains, pt=False, outname=None):
+    n_chains,  = chains.shape
+    for chain in chains:
+        # Every 5th walker
+        # All samples, shown on x-axis
+        plt.figure(figsize=(15, 4))
+        [plt.plot(c[:, 2], alpha=0.3, c='k') for c in chain[::5]]
+
+    if outname is not None:
+        plt.savefig(outname, dpi=300)
+
+
+def plot_example_chain(chain, pt=False, outname=None):
     if pt:
         for temp in range(chain.shape[0]):
             # One panel per temperature (increasing in temperature)
@@ -66,7 +117,7 @@ class SpectrumPlot(object):
     _ax_residual = None
     _ax_tsky = None
 
-    def __init__(self, pproc, figsize=(8, 6)):
+    def __init__(self, pproc, figsize=(7, 5)):
         """
 
         Parameters
@@ -141,6 +192,39 @@ class SpectrumPlot(object):
     def flatchain(self):
         return self.pproc.flatchain
 
+    @property
+    def result_str(self):
+        s = (
+            f"log L = {self.pproc.logL:.2f}\n"
+            f"RMS = {self.pproc.rms*1000:.2f} mK")
+
+        return s
+
+    def full_residual_plot(self):
+        """Makes all the relevant plots for the residual plot"""
+
+        self.plot_residual()
+        self.plot_signal(n_samples=10, bestfit=True)
+        self.plot_injection()
+        # self.ax_residual.set_ylim(-1., 1.)
+        self.plot_signalplusresidual()
+        # self.plot_numin_numax()
+        self.add_infotext()
+
+    def full_tsky_plot(self):
+        """Makes all the relevant plots for the t_sky plot"""
+        self.plot_tsky()
+        self.plot_fg_model()
+        self.plot_model()
+
+    def residual_plot(self, freq, spec, label=None):
+        self.ax_residual.plot(
+            freq, spec, label=label, ls='--')
+
+    def tsky_plot(self, freq, spec, label=None):
+        self.ax_tsky.plot(
+            freq, spec, label=label, ls='--')
+
     def plot_signal(self, n_samples=10, bestfit=True):
 
         # Extract the random samples
@@ -172,11 +256,28 @@ class SpectrumPlot(object):
             self.freq_eff, self.pproc.residual_val, c='blue', label='Residual')
         self.ax_residual.legend()
 
+    def plot_numin_numax(self):
+        """Add vertical lines to indicate the fit range in frequency"""
+        self.ax_residual.vlines(
+            [self.pproc.freq_eff[0], self.pproc.freq_eff[-1]],
+            *self.ax_residual.get_ylim(),
+            linestyles='dotted',
+            label='Fit limits')
+        self.ax_residual.legend()
+
     def plot_injection(self):
         if self.pproc.injection_in is not None:
             self.ax_residual.plot(
                 self.freq_in, self.pproc.injection_in,
                 label='Injection', c='orange')
+            self.ax_residual.legend()
+
+    def plot_t21_in(self):
+        if self.pproc.input_t21 is not None:
+            self.ax_residual.plot(
+                self.freq_in, self.pproc.input_t21,
+                c='k', ls='--', label='Input trough')
+
             self.ax_residual.legend()
 
     def plot_tsky(self):
@@ -213,6 +314,22 @@ class SpectrumPlot(object):
             label='Trough + residual')
 
         self.ax_residual.legend()
+
+    def add_infotext(self):
+        """Adds textbox with fit parameters to the residual plot."""
+
+        # bbox = dict(boxstyle='round', facecolor='grey', alpha=0.25)
+        self.ax_residual.plot(
+            [], [], ' ',
+            label=self.result_str,)
+        # self.ax_residual.legend(frameon=True, facecolor='grey')
+        # self.ax_residual.text(
+        #     0.8, 0.1,
+        #     self.result_str,
+        #     transform=self.ax_residual.transAxes,
+        #     fontsize=10,
+        #     verticalalignment='top',
+        #     bbox=bbox)
 
     def save_plots(self, outdir):
 
